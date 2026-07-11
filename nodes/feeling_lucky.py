@@ -28,6 +28,8 @@ class DPFeelingLucky(DPAbstractSamplerNode):
         if text.strip() == "":
             return ("",)
 
+        self._refresh_wildcards_if_needed()
+
         try:
             prompt = self._prompt_generator.generate(text, 1)[0]
 

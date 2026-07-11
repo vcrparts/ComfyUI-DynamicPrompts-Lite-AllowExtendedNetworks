@@ -3,10 +3,11 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractproperty
 from collections.abc import Iterable
-from pathlib import Path
 
 from dynamicprompts.sampling_context import SamplingContext
 from dynamicprompts.wildcards import WildcardManager
+
+from .wildcard_refresh import get_wildcards_folder, wildcard_refresh_state
 
 logger = logging.getLogger(__name__)
 
@@ -36,27 +37,22 @@ class DPAbstractSamplerNode(ABC):
         wildcards_folder = self._find_wildcards_folder()
         self._wildcard_manager = WildcardManager(path=wildcards_folder)
         self._current_prompt = None
+        self._prompts = None
+        self._wildcards_revision = wildcard_refresh_state.revision
 
-    def _find_wildcards_folder(self) -> Path | None:
-        """
-        Find the wildcards folder.
-        First look in the comfy_dynamicprompts folder, then in the custom_nodes folder, then in the Comfui base folder.
-        """
-        from folder_paths import base_path, folder_names_and_paths
+    def _find_wildcards_folder(self):
+        return get_wildcards_folder()
 
-        wildcard_path = Path(base_path) / "wildcards"
+    def _refresh_wildcards_if_needed(self) -> None:
+        revision = wildcard_refresh_state.revision
+        if revision == self._wildcards_revision:
+            return
 
-        if wildcard_path.exists():
-            return wildcard_path
-
-        extension_path = (
-            Path(folder_names_and_paths["custom_nodes"][0][0])
-            / "comfyui-dynamicprompts"
-        )
-        wildcard_path = extension_path / "wildcards"
-        wildcard_path.mkdir(parents=True, exist_ok=True)
-
-        return wildcard_path
+        self._wildcard_manager.clear_cache()
+        self._current_prompt = None
+        self._prompts = None
+        self._wildcards_revision = revision
+        logger.info("Wildcard cache refreshed for %s", type(self).__name__)
 
     def _get_next_prompt(self, prompts: Iterable[str], current_prompt: str) -> str:
         """
@@ -89,6 +85,8 @@ class DPAbstractSamplerNode(ABC):
 
         if text.strip() == "":
             return ("",)
+
+        self._refresh_wildcards_if_needed()
 
         if self.has_prompt_changed(text):
             self._current_prompt = text

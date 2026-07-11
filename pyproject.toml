@@ -1,8 +1,9 @@
 [project]
-name = "ComfyUI - Dynamic Prompts"
-version = "0.2.1"
+name = "comfyui-dynamicprompts-lite"
+version = "0.3.0"
+description = "Maintained ComfyUI Dynamic Prompts fork with fast startup and manual wildcard refresh."
 dependencies = [
-    "dynamicprompts[attentiongrabber,magicprompt]~=0.30.2",
+    "dynamicprompts[feelinglucky]~=0.30.2",
 ]
 
 [tool.ruff]
