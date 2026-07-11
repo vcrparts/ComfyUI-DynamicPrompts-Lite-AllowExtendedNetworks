@@ -1,13 +1,8 @@
-import shutil
-from pathlib import Path
+"""Legacy installer kept for compatibility with older installation workflows.
 
-comfy_path = Path(__file__).parent.parent.parent
-extension_path = Path(__file__).parent
-js_path = comfy_path / "web" / "extensions"
+Current ComfyUI loads this plugin's frontend from WEB_DIRECTORY automatically.
+No files need to be copied into the ComfyUI installation directory.
+"""
 
-
-def copy_web_extensions():
-    shutil.copy(extension_path / "web-extensions/dp.js", str(js_path))
-
-
-copy_web_extensions()
+if __name__ == "__main__":
+    print("ComfyUI-DynamicPrompts-Lite needs no separate install.py step.")
