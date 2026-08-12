@@ -17,6 +17,18 @@ class RefreshResult:
 
 def get_wildcards_folder() -> Path:
     """Return the wildcard directory owned by this plugin."""
+    # Honor a "wildcards" entry registered via extra_model_paths.yaml, if present.
+    try:
+        import folder_paths
+
+        registered = folder_paths.get_folder_paths("wildcards")
+        if registered:
+            path = Path(registered[0])
+            if path.exists():
+                return path
+    except (KeyError, Exception):
+        pass
+
     plugin_wildcards = Path(__file__).resolve().parent.parent / "wildcards"
     if plugin_wildcards.exists():
         return plugin_wildcards
