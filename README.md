@@ -1,4 +1,12 @@
-FORK CHANGES : VIBECODED WARNING!!! I will not be maintaining or updating this, just for personal use. Updated sampler.py and wildcard refresh.py. Random prompt node now wont refresh every time respecting fixed seed, saving time. Wildcards location follows extra_model_paths.yaml, no more mklink or moving your wildcards all over the place.
+# FORK CHANGES 
+
+ **VIBECODED WARNING!!!** I will not be maintaining or updating this, just for personal use. 
+ 
+ **Updated the following:** 
+ 
+`sampler.py` -`Random prompts` node now wont refresh every time respecting fixed seed, saving time.  
+ 
+`refresh.py` - Wildcards location follows extra_model_paths.yaml, no more mklink or moving your wildcards all over the place.
 
 # ComfyUI DynamicPrompts Lite
 
