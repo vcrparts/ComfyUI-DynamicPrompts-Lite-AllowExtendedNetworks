@@ -24,9 +24,8 @@ class DPAbstractSamplerNode(ABC):
         }
 
     @classmethod
-    def IS_CHANGED(cls, text: str, seed: int, autorefresh: str):
-        # Force re-evaluation of the node
-        return float("NaN")
+    def IS_CHANGED(cls, seed, **kwargs):
+        return seed
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "get_prompt"
