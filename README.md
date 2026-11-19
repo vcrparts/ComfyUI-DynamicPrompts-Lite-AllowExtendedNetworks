@@ -1,5 +1,14 @@
 # FORK CHANGES 
 
+Gemini generated code.
+
+Add toggle to allow extended network tags to pass through the dynamic prompt process.  
+Works with:
+ <lora ...> tags for badjeff/comfyui_lora_tag_loader 
+ <ratio ... > tags for https://github.com/vcrparts/ComfyUI-DynamicRatioLatent
+
+# FORK CHANGES 
+
  **VIBECODED WARNING!!!** I will not be maintaining or updating this, just for personal use. 
  
  **Updated the following:** 
