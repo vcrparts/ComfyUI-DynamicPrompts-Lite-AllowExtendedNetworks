@@ -14,12 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 def escape_angle_tags(text: str) -> str:
-    """Escape unescaped < and > characters so dynamicprompts treats them as literal text."""
+    """Escape unescaped < and > characters so dynamicprompts ignores extra-network tags."""
     if not text:
         return text
     text = re.sub(r"(?<!\\)<", r"\\<", text)
     text = re.sub(r"(?<!\\)>", r"\\>", text)
     return text
+
+
+def unescape_angle_tags(text: str) -> str:
+    """Restore \\< and \\> back to < and > for downstream LoRA and ratio nodes."""
+    if not text:
+        return text
+    return text.replace(r"\<", "<").replace(r"\>", ">")
 
 
 class PassthroughWildcardManager(WildcardManager):
@@ -31,6 +38,12 @@ class PassthroughWildcardManager(WildcardManager):
 
     def get_values(self, wildcard: str):
         values = super().get_values(wildcard)
+        if not self.allow_extra_networks:
+            return values
+        return [escape_angle_tags(v) if isinstance(v, str) else v for v in values]
+
+    def get_all_values(self, wildcard: str):
+        values = super().get_all_values(wildcard)
         if not self.allow_extra_networks:
             return values
         return [escape_angle_tags(v) if isinstance(v, str) else v for v in values]
@@ -141,10 +154,13 @@ class DPAbstractSamplerNode(ABC):
             logger.exception("Something went wrong. Current prompt is None!")
             return ("",)
 
-        new_prompt = self._get_next_prompt(self._prompts, self._current_prompt)
+        new_prompt = str(self._get_next_prompt(self._prompts, self._current_prompt))
+        if allow_extra_networks:
+            new_prompt = unescape_angle_tags(new_prompt)
+
         print(f"New prompt: {new_prompt}")
 
-        return (str(new_prompt),)
+        return (new_prompt,)
 
     @abstractproperty
     def context(self) -> SamplingContext:
