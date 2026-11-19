@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from abc import ABC, abstractproperty
 from collections.abc import Iterable
 
@@ -12,6 +13,29 @@ from .wildcard_refresh import get_wildcards_folder, wildcard_refresh_state
 logger = logging.getLogger(__name__)
 
 
+def escape_angle_tags(text: str) -> str:
+    """Escape unescaped < and > characters so dynamicprompts treats them as literal text."""
+    if not text:
+        return text
+    text = re.sub(r"(?<!\\)<", r"\\<", text)
+    text = re.sub(r"(?<!\\)>", r"\\>", text)
+    return text
+
+
+class PassthroughWildcardManager(WildcardManager):
+    """WildcardManager subclass that optionally escapes < and > inside wildcard files."""
+
+    def __init__(self, path, allow_extra_networks: bool = True):
+        super().__init__(path=path)
+        self.allow_extra_networks = allow_extra_networks
+
+    def get_values(self, wildcard: str):
+        values = super().get_values(wildcard)
+        if not self.allow_extra_networks:
+            return values
+        return [escape_angle_tags(v) if isinstance(v, str) else v for v in values]
+
+
 class DPAbstractSamplerNode(ABC):
     @classmethod
     def INPUT_TYPES(s):
@@ -20,6 +44,7 @@ class DPAbstractSamplerNode(ABC):
                 "text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
                 "seed": ("INT", {"default": 0, "display": "number"}),
                 "autorefresh": (["Yes", "No"], {"default": "No"}),
+                "allow_extra_networks": ("BOOLEAN", {"default": True}),
             },
         }
 
@@ -34,7 +59,10 @@ class DPAbstractSamplerNode(ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         wildcards_folder = self._find_wildcards_folder()
-        self._wildcard_manager = WildcardManager(path=wildcards_folder)
+        self._wildcard_manager = PassthroughWildcardManager(
+            path=wildcards_folder,
+            allow_extra_networks=True,
+        )
         self._current_prompt = None
         self._prompts = None
         self._wildcards_revision = wildcard_refresh_state.revision
@@ -73,7 +101,13 @@ class DPAbstractSamplerNode(ABC):
         """
         return self._current_prompt != text
 
-    def get_prompt(self, text: str, seed: int, autorefresh: str) -> tuple[str]:
+    def get_prompt(
+        self,
+        text: str,
+        seed: int,
+        autorefresh: str,
+        allow_extra_networks: bool = True,
+    ) -> tuple[str]:
         """
         Main entrypoint for this node.
         Using the sampling context, generate a new prompt.
@@ -87,8 +121,16 @@ class DPAbstractSamplerNode(ABC):
 
         self._refresh_wildcards_if_needed()
 
-        if self.has_prompt_changed(text):
-            self._current_prompt = text
+        # Sync toggle state with WildcardManager and reset generator if toggled
+        if self._wildcard_manager.allow_extra_networks != allow_extra_networks:
+            self._wildcard_manager.allow_extra_networks = allow_extra_networks
+            self._current_prompt = None
+            self._prompts = None
+
+        processed_text = escape_angle_tags(text) if allow_extra_networks else text
+
+        if self.has_prompt_changed(processed_text):
+            self._current_prompt = processed_text
             self._prompts = self.context.sample_prompts(self._current_prompt)
 
         if self._prompts is None:
