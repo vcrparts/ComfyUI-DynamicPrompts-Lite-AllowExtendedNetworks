@@ -7,13 +7,6 @@ from .sampler import DPAbstractSamplerNode
 
 
 class DPRandomGenerator(DPAbstractSamplerNode):
-    @classmethod
-    def INPUT_TYPES(cls):
-        input_types = super().INPUT_TYPES()
-        for input_name in ("seed", "autorefresh"):
-            input_types["required"][input_name][1]["advanced"] = True
-        return input_types
-
     @property
     @lru_cache(maxsize=1)
     def context(self) -> SamplingContext:
