@@ -63,6 +63,12 @@ def _build_manifest(root: Path) -> tuple[tuple[str, int, int], ...]:
     return tuple(sorted(entries))
 
 
+def _format_wildcard_name(rel_posix_path: str) -> str:
+    """Convert 'folder/colors.txt' into '__folder/colors__'."""
+    stem_path = Path(rel_posix_path).with_suffix("").as_posix()
+    return f"__{stem_path}__"
+
+
 class WildcardRefreshState:
     """Tracks wildcard file changes without reading their full text on every click."""
 
@@ -81,8 +87,32 @@ class WildcardRefreshState:
         with self._lock:
             changed = manifest != self._manifest
             if changed:
+                old_map = (
+                    {path: (mtime, size) for path, mtime, size in self._manifest}
+                    if self._manifest is not None
+                    else {}
+                )
+                new_map = {path: (mtime, size) for path, mtime, size in manifest}
+
+                added = [p for p in new_map if p not in old_map]
+                modified = [
+                    p for p in new_map if p in old_map and new_map[p] != old_map[p]
+                ]
+                removed = [p for p in old_map if p not in new_map]
+
                 self._manifest = manifest
                 self._revision += 1
+
+                print(f"[DynamicPrompts-Lite] Wildcards refreshed (rev {self._revision}):")
+                for p in added:
+                    print(f"  + Added:    {_format_wildcard_name(p)}")
+                for p in modified:
+                    print(f"  ~ Modified: {_format_wildcard_name(p)}")
+                for p in removed:
+                    print(f"  - Removed:  {_format_wildcard_name(p)}")
+            else:
+                print("[DynamicPrompts-Lite] Wildcard refresh clicked: no file changes detected.")
+
             return RefreshResult(
                 changed=changed,
                 revision=self._revision,
