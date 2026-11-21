@@ -4,9 +4,11 @@ import logging
 import re
 from abc import ABC, abstractproperty
 from collections.abc import Iterable
+from dataclasses import is_dataclass, replace
 
 from dynamicprompts.sampling_context import SamplingContext
 from dynamicprompts.wildcards import WildcardManager
+from dynamicprompts.wildcards.values import WildcardValues
 
 from .wildcard_refresh import get_wildcards_folder, wildcard_refresh_state
 
@@ -29,6 +31,16 @@ def unescape_angle_tags(text: str) -> str:
     return text.replace(r"\<", "<").replace(r"\>", ">")
 
 
+def _escape_wildcard_item(item):
+    if isinstance(item, str):
+        return escape_angle_tags(item)
+    if is_dataclass(item) and hasattr(item, "value"):
+        return replace(item, value=escape_angle_tags(item.value))
+    if hasattr(item, "value") and hasattr(item, "weight"):
+        return type(item)(value=escape_angle_tags(item.value), weight=item.weight)
+    return item
+
+
 class PassthroughWildcardManager(WildcardManager):
     """WildcardManager subclass that optionally escapes < and > inside wildcard files."""
 
@@ -40,13 +52,17 @@ class PassthroughWildcardManager(WildcardManager):
         values = super().get_values(wildcard)
         if not self.allow_extra_networks:
             return values
-        return [escape_angle_tags(v) if isinstance(v, str) else v for v in values]
+        if isinstance(values, WildcardValues):
+            return WildcardValues([_escape_wildcard_item(v) for v in values])
+        return [_escape_wildcard_item(v) for v in values]
 
     def get_all_values(self, wildcard: str):
         values = super().get_all_values(wildcard)
         if not self.allow_extra_networks:
             return values
-        return [escape_angle_tags(v) if isinstance(v, str) else v for v in values]
+        if isinstance(values, WildcardValues):
+            return WildcardValues([_escape_wildcard_item(v) for v in values])
+        return [_escape_wildcard_item(v) for v in values]
 
 
 class DPAbstractSamplerNode(ABC):
